@@ -1,0 +1,7 @@
+---
+
+db_user: root
+db_pass: toor
+db_name: moodle
+moodle_db_user: moodleuser
+moodle_db_pass: mooDlep4sswd

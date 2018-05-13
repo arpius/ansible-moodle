@@ -1,0 +1,88 @@
+---
+
+- name: ensure MariaDB is installed
+  apt: name={{ item }} state=latest
+  with_items:
+    - mariadb-server
+    - python-mysqldb
+  become: yes
+  notify:
+    - enable mariadb
+    - start mariadb
+
+- name: check if /etc/mysql/mariadb.conf.d/50-server.cnf contains "# BEGIN CHANGES REQUIRED BY MOODLE"
+  command: grep -Fxq "# BEGIN CHANGES REQUIRED BY MOODLE" /etc/mysql/mariadb.conf.d/50-server.cnf
+  register: check_conf
+  check_mode: no
+  ignore_errors: yes
+  changed_when: no
+
+- name: modify MariaDB default configuration
+  blockinfile:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    marker: "# {mark} CHANGES REQUIRED BY MOODLE"
+    insertafter: "skip-external-locking"
+    content: |
+      default_storage_engine = innodb
+      innodb_file_per_table = 1
+      innodb_file_format = Barracuda
+      innodb_large_prefix
+    state: present
+  become: yes
+  when: check_conf.rc == 1
+  notify:
+    - restart mariadb
+
+- name: set credentials
+  mysql_user: 
+    name: '{{ db_user }}' 
+    host: '{{ item }}' 
+    password: '{{ db_pass }}'
+    check_implicit_admin: yes 
+    login_user: root
+    login_password: ''
+    state: present
+  with_items:
+    - 127.0.0.1
+    - ::1
+    - localhost
+  become: yes
+
+- name: copy db credentials
+  template: 
+    src: my.cnf.j2
+    dest: ~/.my.cnf
+    owner: root
+    group: root
+    mode: 0600
+  become: yes
+  notify:
+    - restart mariadb
+
+- name: remove anonymous user accounts
+  mysql_user:
+    name: ''
+    state: absent
+  become: yes
+
+- name: remove the test database
+  mysql_user:
+    name: test
+    state: absent
+  become: yes
+
+- name: create database
+  mysql_db: 
+    name: '{{ db_name }}'
+    encoding: utf8mb4 
+    collation: utf8mb4_unicode_ci
+    state: present
+  become: yes
+
+- name: create database user
+  mysql_user: 
+    name: '{{ moodle_db_user }}' 
+    password: '{{ moodle_db_pass }}'
+    priv: '{{ db_name }}.*:ALL'
+    state: present
+  become: yes

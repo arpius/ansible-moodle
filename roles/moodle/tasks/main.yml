@@ -1,0 +1,42 @@
+---
+
+- name: check file exists
+  stat:
+    path: /tmp/moodle-latest-33.tgz
+  register: moodle_tgz
+
+- name: check directory exists
+  stat:
+    path: /var/www/html/moodle
+  register: moodle_dir
+
+- name: get Moodle
+  get_url:
+    url: https://download.moodle.org/stable33/moodle-latest-33.tgz
+    dest: /tmp/moodle-latest-33.tgz
+  become: yes
+  when: not moodle_tgz.stat.exists
+
+- name: unarchive Moodle
+  unarchive:
+    src: /tmp/moodle-latest-33.tgz
+    dest: /var/www/html
+    remote_src: yes
+  become: yes
+  when: not moodle_dir.stat.exists
+
+- name: create moodledata directory
+  file:
+    path: /var/moodledata
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: 0755
+  become: yes
+
+- name: ensure Moodles dependencies are installed
+  apt: name={{ item }} state=latest
+  with_items:
+    - aspell
+    - graphviz
+  become: yes

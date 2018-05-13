@@ -1,0 +1,11 @@
+---
+
+- name: moodle's first setup
+  hosts: lms
+  remote_user: vagrant
+  roles:
+    - common
+    - apache
+    - php
+    - mariadb
+    - moodle
