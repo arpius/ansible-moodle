@@ -10,6 +10,20 @@
     - enable apache
     - start apache
 
+- name: replace ServerTokens OS with Prod
+  replace:
+    path: /etc/apache2/conf-enabled/security.conf
+    regexp: '(ServerTokens) (OS)'
+    replace: '\1 Prod'
+  become: yes
+
+- name: replace ServerSignature On with Off
+  replace:
+    path: /etc/apache2/conf-enabled/security.conf
+    regexp: '(ServerSignature) (On)'
+    replace: '\1 Off'
+  become: yes
+
 - name: change index file
   template: 
     src: index.html
